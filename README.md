@@ -15,7 +15,9 @@ The `start.ps1` script will launch the python script with administrative privile
 2. Login with Google.
 3. Install Monopoly Go! from the app store.
 4. Login
-   4.1. If coming from iOS, go to settings on the game on your iOS device and connect your account to your Facebook. Use facebook to login on Bluestacks.
+
+    4.1. If coming from iOS, go to settings on the game on your iOS device and connect your account to your Facebook. Use facebook to login on Bluestacks.
+
 5. Ensure normal app functionality works.
 6. Clone this repository, or download the zip.
 7. Install python and pip.
