@@ -2,9 +2,8 @@
 
 Automate playing Monopoly Go! using Python and Bluestacks.
 
-<div align="center">
-    <video src="https://github.com/lewisgibson/monopoly-go-bot/assets/12851394/84606b7f-1176-4add-9b97-abb3730e047c" width="540" />
-</div>
+https://github.com/lewisgibson/monopoly-go-bot/assets/12851394/d837e9dd-eafd-4872-a1fa-93654c97966c
+
 
 ## **This script requires administrative privileges**
 
