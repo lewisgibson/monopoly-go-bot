@@ -21,15 +21,15 @@ The `start.ps1` script will launch the python script with administrative privile
 5. Ensure normal app functionality works.
 6. Clone this repository, or download the zip.
 7. Install python and pip.
-8. Install the requirements `pip install -r requirements.txt`
+8. Install the requirements `pip install -r requirements.txt`.
 9. Launch `start.ps1` using PowerShell.
 10. Use F2 to toggle the script - it starts disabled.
 11. Make sure the BlueStacks application is open and visible on a screen at all times.
 
 ## Todo
 
-1. Add images to explain installation steps
+1. Add images to explain installation steps.
 2. Keep track of menu navigation state to prevent scanning for close buttons.
-3. Use Tesseract to read cash balance and automate build upgrades
+3. Use Tesseract to read cash balance and automate build upgrades.
 4. Optimise priority list of images to scan.
 5. Support closing advertisements.
