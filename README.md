@@ -32,4 +32,3 @@ The `start.ps1` script will launch the python script with administrative privile
 2. Keep track of menu navigation state to prevent scanning for close buttons.
 3. Use Tesseract to read cash balance and automate build upgrades.
 4. Optimise priority list of images to scan.
-5. Support closing advertisements.
