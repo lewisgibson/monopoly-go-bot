@@ -2,6 +2,10 @@
 
 Automate playing Monopoly Go! using Python and Bluestacks.
 
+<div align="center">
+    <video src="https://github.com/lewisgibson/monopoly-go-bot/assets/12851394/84606b7f-1176-4add-9b97-abb3730e047c" width="540" />
+</div>
+
 ## **This script requires administrative privileges**
 
 The `start.ps1` script will launch the python script with administrative privileges for you. It needs escalated privileges for these reasons:
