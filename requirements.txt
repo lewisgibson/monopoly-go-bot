@@ -1,4 +1,4 @@
-pillow==9.2.0
+pillow==9.3.0
 pyautogui==0.9.54
 pydirectinput==1.0.4
 pynput==1.7.6
