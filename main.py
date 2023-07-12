@@ -7,38 +7,40 @@ import pyscreeze
 import PIL.Image
 import pynput
 
-running = False
-
-
-def on_press(key):
-    global running
-    if key == pynput.keyboard.Key.f2:
-        running = not running
-        if running:
-            print("Started")
-        else:
-            print("Stopped")
-
-
-listener = pynput.keyboard.Listener(on_press=on_press)
-listener.start()
-
 
 class Monopoly:
+    running = False
     cache: dict[str, PIL.Image.Image] = {}
 
     def __init__(self, delay: float) -> None:
+        self.PrintBanner()
+        self.SetupKeyHandler()
         while True:
             self.LoopImages()
             time.sleep(delay)
 
-    def LoopImages(self) -> None:
-        global running
-        if not running:
-            return
+    def PrintBanner(self) -> None:
+        print("Monopoly Go! Bot")
+        print()
+        print("Press F2 to toggle running.")
+        print()
 
+    def SetupKeyHandler(self) -> None:
+        def onKeyPress(key) -> None:
+            if key == pynput.keyboard.Key.f2:
+                self.running = not self.running
+                if self.running:
+                    print("Started")
+                    print()
+                else:
+                    print("Stopped. Press F2 to start again.")
+                    print()
+
+        pynput.keyboard.Listener(onKeyPress).start()
+
+    def LoopImages(self) -> None:
         for path in sorted(glob.glob(pathname="*.png", root_dir="images")):
-            if not running:
+            if not self.running:
                 return
 
             if self.ProcessImage(path):
