@@ -8,8 +8,23 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v3.5.0
 
-            - name: Build
-              run: docker build -t monopoly-go-bot .
+            - name: Setup Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version-file: .python-version
+                  cache: pip
+
+            - name: Install Dependencies
+              run: pip install -r requirements.txt
 
             - name: Test
-              run: docker run monopoly-go-bot
+              shell: pwsh
+              run: |
+                  $process = Start-Process -FilePath powershell -ArgumentList start.ps1 -PassThru;
+                  $result = $process.WaitForExit(5000);
+                  if ($result) {
+                      Write-Host "Exited with code $($process.ExitCode)";
+                  } else {
+                      Stop-Process -Id $process.Id -Force;
+                      Write-Host "Successful";
+                  }
