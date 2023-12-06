@@ -43,8 +43,10 @@ class Monopoly:
             if not self.running:
                 return
 
-            if self.ProcessImage(path):
-                break
+            imageProcessed = self.ProcessImage(path)
+            if imageProcessed:
+                time.sleep(0.5)
+                continue
 
     def LoadImage(self, path: str) -> PIL.Image.Image:
         image = self.cache.get(path)
@@ -52,16 +54,20 @@ class Monopoly:
             image = self.cache[path] = PIL.Image.open(f"images/{path}")
         return image
 
-    def Find(self, image: PIL.Image.Image) -> pyscreeze.Point | None:
-        result = pyautogui.locateOnScreen(image, grayscale=True, confidence=0.75)
-        if result is None:
+    def Find(self, image: PIL.Image.Image, path: str) -> pyscreeze.Point | None:
+        try:
+            result = pyautogui.locateOnScreen(image, grayscale=True, confidence=0.7)
+            if result is None:
+                return None
+            return pyautogui.center(result)
+        except pyautogui.ImageNotFoundException:
+            print(f"Could not locate {path} with sufficient confidence.")
             return None
-        return pyautogui.center(result)
 
     def ProcessImage(self, path: str) -> bool:
         image = self.LoadImage(path)
 
-        point = self.Find(image)
+        point = self.Find(image, path)
         if point is None:
             print(f"Scanning for {path}")
             return False
