@@ -7,7 +7,7 @@ https://github.com/lewisgibson/monopoly-go-bot/assets/12851394/d837e9dd-eafd-487
 
 ## **This script requires administrative privileges**
 
-The `start.ps1` script will launch the python script with administrative privileges for you. It needs escalated privileges for these reasons:
+The `main.py` script will launch the python script with administrative privileges for you. It needs escalated privileges for these reasons:
 
 1. Bluestacks is a virtual machine where standard mouseclick emulation via `pyautogui` does **not** work. Instead this script uses raw Win32 calls via `pydirectinput`.
 2. A global key listener is setup to toggle the script on and off - this is a requirement with a low polling delay because the script takes control of the mouse.
@@ -25,7 +25,7 @@ The `start.ps1` script will launch the python script with administrative privile
 6. Clone this repository, or download the zip.
 7. Install python and pip.
 8. Install the requirements `pip install -r requirements.txt`.
-9. Launch `start.ps1` using PowerShell.
+9. Launch `python main.py` using PowerShell.
 10. Use F2 to toggle the script - it starts disabled.
 11. Make sure the BlueStacks application is open and visible on a screen at all times.
 

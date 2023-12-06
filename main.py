@@ -1,4 +1,6 @@
+import ctypes
 import sys
+import os
 import time
 import pyautogui
 import pydirectinput
@@ -6,6 +8,22 @@ import glob
 import pyscreeze
 import PIL.Image
 import pynput
+import random
+import pygetwindow as gw
+
+#For elevated permssions, negating the powershell script
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+if not is_admin():
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+    sys.exit()
+
+#Variable to establish the window name. It could be different depending on software and systems.
+active_window = "BlueStacks App Player"
 
 
 class Monopoly:
@@ -39,7 +57,10 @@ class Monopoly:
         pynput.keyboard.Listener(onKeyPress).start()
 
     def LoopImages(self) -> None:
-        for path in sorted(glob.glob(pathname="*.png", root_dir="images")):
+        image_paths = sorted(glob.glob(pathname="*.png", root_dir="images"))
+        random.shuffle(image_paths)
+
+        for path in image_paths:
             if not self.running:
                 return
 
@@ -56,12 +77,23 @@ class Monopoly:
 
     def Find(self, image: PIL.Image.Image, path: str) -> pyscreeze.Point | None:
         try:
-            result = pyautogui.locateOnScreen(image, grayscale=True, confidence=0.7)
+            window = gw.getWindowsWithTitle(active_window)[0]
+            if not window:
+                print(f"{active_window} window not found.")
+                return None
+            if window.isMinimized:
+                window.restore()
+
+            window.activate()
+
+            region = (window.left, window.top, window.width, window.height)
+
+            result = pyautogui.locateOnScreen(image, region=region, grayscale=True, confidence=0.8)
             if result is None:
                 return None
+
             return pyautogui.center(result)
         except pyautogui.ImageNotFoundException:
-            print(f"Could not locate {path} with sufficient confidence.")
             return None
 
     def ProcessImage(self, path: str) -> bool:
@@ -69,14 +101,12 @@ class Monopoly:
 
         point = self.Find(image, path)
         if point is None:
-            print(f"Scanning for {path}")
             return False
 
-        print(f"Scanning for {path} -> ({point.x}, {point.y})")
+        print(f"Located matching image for {path} -> ({point.x}, {point.y})")
         pyautogui.moveTo(x=point.x, y=point.y, duration=0.2)
         pydirectinput.click()
         return True
-
 
 try:
     Monopoly(delay=0.1)
