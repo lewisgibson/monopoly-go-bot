@@ -10,8 +10,10 @@ import PIL.Image
 import pynput
 import random
 import pygetwindow as gw
+from threading import Event
+import queue
 
-#For elevated permssions, negating the powershell script
+# For elevated permissions, negating the PowerShell script
 def is_admin():
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
@@ -22,46 +24,47 @@ if not is_admin():
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
     sys.exit()
 
-#Variable to establish the window name. It could be different depending on software and systems.
+# Variable to establish the window name. It could be different depending on software and systems.
 active_window = "BlueStacks App Player"
 
-
 class Monopoly:
-    running = False
-    cache: dict[str, PIL.Image.Image] = {}
-
-    def __init__(self, delay: float) -> None:
+    def __init__(self, delay: float, stop_event: Event, queue: queue.Queue) -> None:
+        self.delay = delay
+        self.stop_event = stop_event
+        self.queue = queue
+        self.cache: dict[str, PIL.Image.Image] = {}
+        self.running = False
         self.PrintBanner()
         self.SetupKeyHandler()
-        while True:
-            self.LoopImages()
-            time.sleep(delay)
+        self.RunBot()
 
     def PrintBanner(self) -> None:
-        print("Monopoly Go! Bot")
-        print()
-        print("Press F2 to toggle running.")
-        print()
+        banner = "Monopoly Go! Bot\n\nPress F2 to toggle running.\n"
+        self.queue.put(banner)
 
     def SetupKeyHandler(self) -> None:
         def onKeyPress(key) -> None:
             if key == pynput.keyboard.Key.f2:
                 self.running = not self.running
                 if self.running:
-                    print("Started")
-                    print()
+                    self.queue.put("Started\n")
                 else:
-                    print("Stopped. Press F2 to start again.")
-                    print()
+                    self.queue.put("Stopped. Press F2 to start again.\n")
 
         pynput.keyboard.Listener(onKeyPress).start()
+
+    def RunBot(self) -> None:
+        while not self.stop_event.is_set():
+            if self.running:
+                self.LoopImages()
+            time.sleep(self.delay)
 
     def LoopImages(self) -> None:
         image_paths = sorted(glob.glob(pathname="*.png", root_dir="images"))
         random.shuffle(image_paths)
 
         for path in image_paths:
-            if not self.running:
+            if not self.running or self.stop_event.is_set():
                 return
 
             imageProcessed = self.ProcessImage(path)
@@ -79,15 +82,13 @@ class Monopoly:
         try:
             window = gw.getWindowsWithTitle(active_window)[0]
             if not window:
-                print(f"{active_window} window not found.")
+                self.queue.put(f"{active_window} window not found.\n")
                 return None
             if window.isMinimized:
                 window.restore()
 
             window.activate()
-
             region = (window.left, window.top, window.width, window.height)
-
             result = pyautogui.locateOnScreen(image, region=region, grayscale=True, confidence=0.8)
             if result is None:
                 return None
@@ -98,17 +99,19 @@ class Monopoly:
 
     def ProcessImage(self, path: str) -> bool:
         image = self.LoadImage(path)
-
         point = self.Find(image, path)
         if point is None:
             return False
 
-        print(f"Located matching image for {path} -> ({point.x}, {point.y})")
+        self.queue.put(f"Located matching image for {path} -> ({point.x}, {point.y})\n")
         pyautogui.moveTo(x=point.x, y=point.y, duration=0.2)
         pydirectinput.click()
         return True
 
-try:
-    Monopoly(delay=0.1)
-except KeyboardInterrupt:
-    sys.exit()
+if __name__ == "__main__":
+    try:
+        stop_event = Event()
+        message_queue = queue.Queue()
+        Monopoly(delay=0.1, stop_event=stop_event, queue=message_queue)
+    except KeyboardInterrupt:
+        sys.exit()
