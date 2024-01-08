@@ -1,6 +1,5 @@
 import ctypes
 import sys
-import os
 import time
 import pyautogui
 import pydirectinput
@@ -12,6 +11,7 @@ import random
 import pygetwindow as gw
 from threading import Event
 import queue
+
 
 # For elevated permissions, negating the PowerShell script
 def is_admin():
@@ -28,7 +28,8 @@ if not is_admin():
 active_window = "BlueStacks App Player"
 
 class Monopoly:
-    def __init__(self, delay: float, stop_event: Event, queue: queue.Queue) -> None:
+    def __init__(self, delay: float, stop_event: Event, queue: queue.Queue, active_window: str) -> None:
+        self.active_window = active_window
         self.delay = delay
         self.stop_event = stop_event
         self.queue = queue
@@ -66,8 +67,13 @@ class Monopoly:
         for path in image_paths:
             if not self.running or self.stop_event.is_set():
                 return
-
+            
             imageProcessed = self.ProcessImage(path)
+        
+            if path.endswith("1keepbuildingX.png"):
+                self.ProcessImage(path.replace("1keepbuildingX.png", "1buildgrayX.png"))
+                time.sleep(0.5)
+                continue
             if imageProcessed:
                 time.sleep(0.5)
                 continue
