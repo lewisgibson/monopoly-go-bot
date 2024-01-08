@@ -9,6 +9,8 @@ import PIL.Image
 import pynput
 import pygetwindow as gw
 from itertools import repeat
+import json
+from typing import Dict
 
 #For elevated permssions, negating the powershell script
 def is_admin():
@@ -29,28 +31,48 @@ class Monopoly:
     running = False
     cache: dict[str, PIL.Image.Image] = {}
 
-    def __init__(self, delay: float) -> None:
+    def __init__(self, delay: float, bot_name: str) -> None:
         self.PrintBanner()
         self.SetupKeyHandler()
-        self.sort_image_actions()
         self.loop_fails = 0
+        self.bot_name = bot_name
+        self.StartBot()
+        self.exit = False
         while True:
             self.LoopImages()
             time.sleep(delay)
 
-    def sort_image_actions(self) -> None:
-        self.image_paths = sorted(glob.glob(pathname="*.png", root_dir="images"))
-        # order the list in actions that are more likely instead of just randomizing everything
-        # 1. go button, 2. collect, 3. chance, 4. jail-roll, 5. bank heist, 6. shutdown, 7. X's, 8. 0/
-        sorted_image_paths = [path for path in self.image_paths if path.endswith("go.png")]
-        sorted_image_paths.extend([path for path in self.image_paths if path.endswith("collect.png")])
-        sorted_image_paths.extend([path for path in self.image_paths if path.endswith("chance.png")])
-        sorted_image_paths.extend([path for path in self.image_paths if path.endswith("jail-roll.png")])
-        sorted_image_paths.extend([path for path in self.image_paths if path.endswith("shutdown.png")])
-        sorted_image_paths.extend([path for path in self.image_paths if path.endswith("bank-heist-door.png")])
-        sorted_image_paths.extend([path for path in self.image_paths if path.endswith("X.png")])
-        sorted_image_paths.extend([path for path in self.image_paths if path.endswith("rolls-done.png")])
-        self.sorted_images = sorted_image_paths
+
+    def StartBot(self) -> None:
+        try:
+            image = self.LoadImage(f'{self.bot_name}.png')
+            window = gw.getWindowsWithTitle("BlueStacks Multi Instance Manager")[0]
+            if not window:
+                print(f"{active_window} window not found.")
+                raise Exception("Can't find multi-instance manager window")
+            if window.isMinimized:
+                window.restore()
+
+            window.resizeTo(920, 920)
+            window.activate()
+
+            region = (window.left, window.top, window.width, window.height)
+
+            result = pyautogui.locateOnScreen(image, region=region, grayscale=False, confidence=0.9)
+            if result is None:
+                raise Exception("Bot doesn't exist!")
+
+            result = pyautogui.center(result)
+            # move to 75 instead of in the middle of matching bot to click start
+            pyautogui.moveTo(x=(int((result.x*2)/4)*2.5), y=result.y, duration=0.2)
+            pydirectinput.click()
+            time.sleep(10)
+            while not self.ProcessImage("monopoly-app.png"):
+                self.ProcessImage("monopoly-app.png")
+            time.sleep(10)
+        except pyautogui.ImageNotFoundException:
+            raise
+
 
     def PrintBanner(self) -> None:
         print("Monopoly Go! Bot")
@@ -72,90 +94,29 @@ class Monopoly:
         pynput.keyboard.Listener(onKeyPress).start()
 
     def LoopImages(self) -> None:
-        current_sorted_images = self.sorted_images
-        for path in current_sorted_images:
-            if not self.running:
+        loop_actions = ["go", "collect", "shutdown", "bank-heist", "jail-roll", "start-upX", "otherX"]
+        if not self.running:
+            return
+        for loop_action in loop_actions:
+            image_processed = self.ProcessImage(f"{loop_action}.png")
+            if image_processed:
                 return
-            elif path.endswith(("go.png","collect.png", "chance.png", "X.png")):
-                if path.endswith("go.png"):
-                    tried_all = {path: self.ProcessImage(path) for path in self.sorted_images if path.endswith("go.png")}
-                    if any(tried_all.values()):
-                        [self.sorted_images.remove(path) for path in self.sorted_images if path.endswith("go.png") and not tried_all.get(path, False)]
-                        self.loop_fails = 0
-                        return
-                if path.endswith("keepbuildingX.png"):
-                    tried_all = [self.ProcessImage(path) for path in self.sorted_images if path.endswith("keepbuildingX.png")]
-                    if any(tried_all):
-                        [self.ProcessImage(path) for path in self.sorted_images if path.endswith("buildgrayX.png")]
-                        self.loop_fails = 0
-                        return
-                imageProcessed = self.ProcessImage(path)
-                if imageProcessed:
-                    self.loop_fails = 0
-                    return
-            elif path.endswith("jail-roll.png"):
-                print("trying jails")
-                tried_all = {path: self.ProcessImage(path) for path in self.sorted_images if path.endswith("jail-roll.png")}
-                if any(tried_all.values()):
-                    jail_trues = [path for path, v in tried_all.items() if v]
-                    self.ProcessImage(jail_trues[0])
-                    self.ProcessImage(jail_trues[0])
-                    [self.sorted_images.remove(jail) for jail in current_sorted_images if jail.endswith("jail-roll.png") and not tried_all.get(jail, False)]
-                    self.loop_fails = 0
-                    return
-            elif path.endswith("shutdown.png"):
-                print("trying shutdowns")
-                [self.ProcessImage(path) for path in self.sorted_images if path.endswith("switch.png")]
-                [self.ProcessImage(path) for path in self.sorted_images if path.endswith("gorandom.png")]
-                tried_all = {path: self.ProcessImage(path) for path in self.sorted_images if path.endswith("shutdown.png")}
-                imageProcessed = any(tried_all.values())
-                if imageProcessed:
-                    [self.sorted_images.remove(shutdown) for shutdown in current_sorted_images if shutdown.endswith("shutdown.png") and not tried_all.get(shutdown, False)]
-                    self.loop_fails = 0
-                    return
-            elif path.endswith("bank-heist-door.png"):
-                print("trying heists")
-                tried_all = {path: self.ProcessImage(path) for path in self.sorted_images if path.endswith("bank-heist-door.png")}
-                if any(tried_all.values()):
-                    heist_trues = [path for path, v in tried_all.items() if v]
-                    for _ in repeat(None, 7):
-                        [self.ProcessImage(path) for path in heist_trues]
-                    [self.sorted_images.remove(heist) for heist in current_sorted_images if heist.endswith("bank-heist-door.png") and not tried_all.get(heist, False)]
-                    self.loop_fails = 0
-                    return
-            elif path.endswith("rolls-done.png"):
-                tried_all = {path: self.ProcessImage(path) for path in self.image_paths if path.endswith("rolls-done.png")}
-                if any(tried_all.values()):
-                    icons = {path: self.ProcessImage(path) for path in self.image_paths if path.endswith("buildicon.png")}
-                    if any(icons.values()):
-                        builds = [path for path in self.image_paths if path.replace(".png", "").split("build")[0].isdigit() and path.replace(".png", "").split("build")[1].isdigit()]
-                        tried_builds = {}
-                        while any(tried_all.values()):
-                            time.sleep(1)
-                            tried_builds = {build: self.ProcessImage(build) for build in builds}
-                            for build, build_truth in tried_builds.items():
-                                remove_builds = [rm_build for rm_build in self.image_paths if rm_build.endswith(build.split("build")[1]) and not rm_build != build and build_truth]
-                                [self.image_paths.remove(rm_build) for rm_build in remove_builds]
-                            tried_all = {path: self.ProcessImage(path) for path in self.image_paths if path in builds}
-                            builds = [path for path in self.image_paths if path.replace(".png", "").split("build")[0].isdigit() and path.replace(".png", "").split("build")[1].isdigit()]
-                        return
-            else:
-                imageProcessed = any([self.ProcessImage(path) for path in self.sorted_images])
-                if imageProcessed:
-                    return
-                elif self.loop_fails == 3:
-                    raise Exception("Loop Failure, add images corresponding to the current Bot's image.")
-                elif self.loop_fails == 2:
-                    # reset sorted images when loop fails
-                    self.loop_fails += 1
-                    print(f"No image is matching. loop failures are at {self.loop_fails}, Resetting image selections.")
-                    return
-                elif self.loop_fails == 1:
-                    self.loop_fails += 1
-                    print(f"No image is matching. loop failures are at {self.loop_fails}")
-                    return
-
-
+        if self.ProcessImage("keep-rolling.png"):
+            self.ProcessImage("buildX.png")
+            while self.ProcessImage("otherX.png"):
+                self.ProcessImage("otherX.png")
+            self.ProcessImage("build.png")
+            continue_building = True
+            while continue_building:
+                continue_building = any([self.ProcessImage(f'build{num}.png') for num in range(1,6)])
+            return
+        if self.ProcessImage("keep-building.png"):
+            self.ProcessImage("buildX.png")
+            self.ProcessImage("close-phone.png")
+            self.ProcessImage("really-close-phone.png")
+            self.exit = True
+            return
+        return
 
     def LoadImage(self, path: str) -> PIL.Image.Image:
         image = self.cache.get(path)
@@ -165,18 +126,19 @@ class Monopoly:
 
     def Find(self, image: PIL.Image.Image, path: str) -> pyscreeze.Point | None:
         try:
-            window = gw.getWindowsWithTitle("DashingBee93")[0]
+            window = gw.getWindowsWithTitle(self.bot_name)[0]
             if not window:
                 print(f"{active_window} window not found.")
                 return None
             if window.isMinimized:
                 window.restore()
 
+            window.resizeTo(540, 960)
             window.activate()
 
             region = (window.left, window.top, window.width, window.height)
 
-            result = pyautogui.locateOnScreen(image, region=region, grayscale=False, confidence=0.9)
+            result = pyautogui.locateOnScreen(image, region=region, grayscale=False, confidence=0.8)
             if result is None:
                 return None
 
@@ -192,11 +154,18 @@ class Monopoly:
             return False
 
         print(f"Located matching image for {path} -> ({point.x}, {point.y})")
+        
         pyautogui.moveTo(x=point.x, y=point.y, duration=0.2)
         pydirectinput.click()
         return True
 
 try:
-    Monopoly(delay=1)
+    with open("bots.json") as bots:
+        bots = json.loads(bots.read())
+    for bot in bots:
+        monops_bot = Monopoly(delay=1, bot_name=bot)
+        while not monops_bot.exit:
+            pass
+        del monops_bot
 except KeyboardInterrupt:
     sys.exit()
