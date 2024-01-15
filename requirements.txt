@@ -1,6 +1,7 @@
-pillow==9.3.0
-pyautogui==0.9.54
-pydirectinput==1.0.4
+pywin32==306
 pynput==1.7.6
-pyscreeze==0.1.29
-opencv-python==4.8.0.74
+pydirectinput==1.0.4
+pyautogui==0.9.54
+glob2==0.7
+pyscreeze==0.1.30
+pygetwindow==0.0.9
