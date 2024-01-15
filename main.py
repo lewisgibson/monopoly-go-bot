@@ -53,22 +53,26 @@ class Monopoly:
             if window.isMinimized:
                 window.restore()
 
-            window.resizeTo(920, 920)
+            window.resizeTo(1280, 720)
             window.activate()
 
             region = (window.left, window.top, window.width, window.height)
 
-            result = pyautogui.locateOnScreen(image, region=region, grayscale=False, confidence=0.9)
-            if result is None:
-                raise Exception("Bot doesn't exist!")
+            try:
+                result = pyautogui.locateOnScreen(image, region=region, grayscale=False, confidence=0.9)
+            except pyautogui.ImageNotFoundException:
+                check_for_start = self.LoadImage(f'{self.bot_name}_started.png')
+                try:
+                    result = pyautogui.locateOnScreen(check_for_start, region=region, grayscale=False, confidence=0.9)
+                except:
+                    raise
 
             result = pyautogui.center(result)
             # move to 75 instead of in the middle of matching bot to click start
             pyautogui.moveTo(x=(int((result.x*2)/4)*2.5), y=result.y, duration=0.2)
             pydirectinput.click()
             time.sleep(10)
-            while not self.ProcessImage("monopoly-app.png"):
-                self.ProcessImage("monopoly-app.png")
+            self.ProcessImage("monopoly-app.png")
             time.sleep(10)
         except pyautogui.ImageNotFoundException:
             raise
@@ -94,28 +98,41 @@ class Monopoly:
         pynput.keyboard.Listener(onKeyPress).start()
 
     def LoopImages(self) -> None:
-        loop_actions = ["go", "collect", "shutdown", "bank-heist", "jail-roll", "start-upX", "otherX"]
+        loop_actions = ["go", "collect", "switch-opponent", "click-random", "bank-heist", 
+                        "jail-roll", "spin", "cash-grab" ,"start-upX", "otherX", "keep-rolling", 
+                        "other-otherX", "transparentX", "graydot", "monopoly-app", "monopoly-app2"]
         if not self.running:
             return
         for loop_action in loop_actions:
             image_processed = self.ProcessImage(f"{loop_action}.png")
-            if image_processed:
+            if image_processed and loop_action == "click-random":
+                for _ in repeat(None, 5):
+                    time.sleep(0.3)
+                    image_processed = self.ProcessImage("shutdown.png")
+            if image_processed and loop_action == "bank-heist":
+                for _ in repeat(None, 10):
+                    time.sleep(0.3)
+                    self.ProcessImage("bank-heist.png")
                 return
-        if self.ProcessImage("keep-rolling.png"):
-            self.ProcessImage("buildX.png")
-            while self.ProcessImage("otherX.png"):
+            if image_processed and loop_action == "graydot.png":
+                while not self.ProcessImage("keep-building"):
+                    self.ProcessImage("graydot.png")
+            if self.ProcessImage("keep-rolling.png"):
+                self.ProcessImage("keep-rollingX.png")
                 self.ProcessImage("otherX.png")
-            self.ProcessImage("build.png")
-            continue_building = True
-            while continue_building:
-                continue_building = any([self.ProcessImage(f'build{num}.png') for num in range(1,6)])
-            return
-        if self.ProcessImage("keep-building.png"):
-            self.ProcessImage("buildX.png")
-            self.ProcessImage("close-phone.png")
-            self.ProcessImage("really-close-phone.png")
-            self.exit = True
-            return
+                self.ProcessImage("other-otherX.png")
+                self.ProcessImage("transparentX.png")
+                self.ProcessImage("inviteX.png")
+                self.ProcessImage("build.png")
+                return
+            if self.ProcessImage("keep-building.png"):
+                self.ProcessImage("buildX.png")
+                self.ProcessImage("close-phone.png")
+                self.ProcessImage("really-close-phone.png")
+                self.exit = True
+                return
+            if image_processed:
+                return            
         return
 
     def LoadImage(self, path: str) -> PIL.Image.Image:
@@ -138,7 +155,7 @@ class Monopoly:
 
             region = (window.left, window.top, window.width, window.height)
 
-            result = pyautogui.locateOnScreen(image, region=region, grayscale=False, confidence=0.8)
+            result = pyautogui.locateOnScreen(image, region=region, grayscale=False, confidence=0.75)
             if result is None:
                 return None
 
@@ -159,13 +176,15 @@ class Monopoly:
         pydirectinput.click()
         return True
 
-try:
-    with open("bots.json") as bots:
-        bots = json.loads(bots.read())
-    for bot in bots:
-        monops_bot = Monopoly(delay=1, bot_name=bot)
-        while not monops_bot.exit:
-            pass
-        del monops_bot
-except KeyboardInterrupt:
-    sys.exit()
+if __name__ == "__main__":
+    try:
+        bots = []
+        with open("bots.json") as bots_file:
+            bots = json.loads(bots_file.read())
+        for bot in bots:
+            monops_bot = Monopoly(delay=0.8, bot_name=bot)
+            while not monops_bot.exit:
+                pass
+            del monops_bot
+    except KeyboardInterrupt:
+        sys.exit()
